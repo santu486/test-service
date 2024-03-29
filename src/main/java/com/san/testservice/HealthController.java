@@ -9,8 +9,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class HealthController {
 
-	@Value("${name}")
-	private String name;
+	
 	
 	Logger logger = LoggerFactory.getLogger(HealthController.class);
 
@@ -19,7 +18,7 @@ public class HealthController {
 		logger.info("Health Check Request is recieved");
 		System.out.println("Health Check Request is recieved");
 		
-		return "ok " + name;
+		return "ok " ;
 	}
 
 }
