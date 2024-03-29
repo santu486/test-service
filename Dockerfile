@@ -1,19 +1,31 @@
-FROM ubuntu:20.04
-WORKDIR /app
-RUN apt update -y  && apt install -y wget
-RUN pwd
-RUN cd /opt && wget --no-check-certificate https://downloads.apache.org/maven/maven-3/3.8.8/binaries/apache-maven-3.8.8-bin.tar.gz
-RUN cd /opt && tar -xvf apache-maven-3.8.8-bin.tar.gz
-RUN cd /opt && ln -s apache-maven-3.8.8 maven
-RUN apt -y install openjdk-17-jdk
+####
+# This Dockerfile is used in order to build a container that runs the Spring Boot application
+#
+# Build the image with:
+#
+# docker build -f docker/Dockerfile -t springboot/sample-demo .
+#
+# Then run the container using:
+#
+# docker run -i --rm -p 8081:8081 springboot/sample-demo
+####
+FROM registry.access.redhat.com/ubi8/openjdk-17:1.15-1.1682053058 AS builder
+
+# Build dependency offline to streamline build
+RUN mkdir project
+WORKDIR /home/jboss/project
 COPY pom.xml .
-COPY src ./src
-ENV M2_HOME /opt/maven
-ENV PATH ${M2_HOME}/bin:${PATH}:/usr/bin
-RUN echo $PATH
-RUN mvn -version
-RUN mvn install -DskipTests
-RUN ls target
-EXPOSE 8080
-ENV PORT 8080
-CMD  ["java", "-Dserver.port=8080", "-jar", "/app/target/*.jar"]
+RUN mvn dependency:go-offline
+
+COPY src src
+RUN mvn package -Dmaven.test.skip=true
+# compute the created jar name and put it in a known location to copy to the next layer.
+# If the user changes pom.xml to have a different version, or artifactId, this will find the jar
+RUN grep version target/maven-archiver/pom.properties | cut -d '=' -f2 >.env-version
+RUN grep artifactId target/maven-archiver/pom.properties | cut -d '=' -f2 >.env-id
+RUN mv target/$(cat .env-id)-$(cat .env-version).jar target/export-run-artifact.jar
+
+FROM registry.access.redhat.com/ubi8/openjdk-17-runtime:1.15-1.1682053056
+COPY --from=builder /home/jboss/project/target/export-run-artifact.jar  /deployments/export-run-artifact.jar
+EXPOSE 8081
+ENTRYPOINT ["/opt/jboss/container/java/run/run-java.sh", "--server.port=8081"]
