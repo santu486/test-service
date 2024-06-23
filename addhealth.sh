@@ -24,13 +24,7 @@ http {
         listen       80;
         server_name  localhost;
 
-        location = /health {
-            access_log off;
-            add_header 'Content-Type' 'application/json';
-            return 200 '{"status":"UP"}';
-        }
-
-
+        
         location / {
             root   /usr/share/nginx/html;
             index  index.html index.htm;
