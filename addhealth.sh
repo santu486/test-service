@@ -6,137 +6,128 @@
 
 # Update nginx.conf
 cat <<EOL > /etc/nginx/nginx.conf
-# Your custom nginx configuration here
-user  www www;
 
-worker_processes  2;
+#user  nobody;
+worker_processes  1;
 
-pid /var/run/nginx.pid;
+#error_log  logs/error.log;
+#error_log  logs/error.log  notice;
+#error_log  logs/error.log  info;
 
-#                          [ debug | info | notice | warn | error | crit ]
+#pid        logs/nginx.pid;
 
-error_log  /var/log/nginx.error_log  info;
 
 events {
-    worker_connections   2000;
-
-    # use [ kqueue | epoll | /dev/poll | select | poll ];
-    use kqueue;
+    worker_connections  1024;
 }
 
-http {
 
-    include       conf/mime.types;
+http {
+    include       mime.types;
     default_type  application/octet-stream;
 
+    #log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+    #                  '$status $body_bytes_sent "$http_referer" '
+    #                  '"$http_user_agent" "$http_x_forwarded_for"';
 
-    log_format main      '$remote_addr - $remote_user [$time_local] '
-                         '"$request" $status $bytes_sent '
-                         '"$http_referer" "$http_user_agent" '
-                         '"$gzip_ratio"';
+    #access_log  logs/access.log  main;
 
-    log_format download  '$remote_addr - $remote_user [$time_local] '
-                         '"$request" $status $bytes_sent '
-                         '"$http_referer" "$http_user_agent" '
-                         '"$http_range" "$sent_http_content_range"';
+    sendfile        on;
+    #tcp_nopush     on;
 
-    client_header_timeout  3m;
-    client_body_timeout    3m;
-    send_timeout           3m;
+    #keepalive_timeout  0;
+    keepalive_timeout  65;
 
-    client_header_buffer_size    1k;
-    large_client_header_buffers  4 4k;
-
-    gzip on;
-    gzip_min_length  1100;
-    gzip_buffers     4 8k;
-    gzip_types       text/plain;
-
-    output_buffers   1 32k;
-    postpone_output  1460;
-
-    sendfile         on;
-    tcp_nopush       on;
-    tcp_nodelay      on;
-    send_lowat       12000;
-
-    keepalive_timeout  75 20;
-
-    #lingering_time     30;
-    #lingering_timeout  10;
-    #reset_timedout_connection  on;
-
+    #gzip  on;
 
     server {
-        listen        one.example.com;
-        server_name   one.example.com  www.one.example.com;
+        listen       80;
+        server_name  localhost;
 
-        access_log   /var/log/nginx.access_log  main;
+        #charset koi8-r;
+
+        #access_log  logs/host.access.log  main;
 
         location / {
-            proxy_pass         http://127.0.0.1/;
-            proxy_redirect     off;
+            root   html;
+            index  index.html index.htm;
+        }
+		
+		 location /api {
+            return  200 'all are healthy';
+        }
+		
+		
 
-            proxy_set_header   Host             $host;
-            proxy_set_header   X-Real-IP        $remote_addr;
-            #proxy_set_header  X-Forwarded-For  $proxy_add_x_forwarded_for;
+        #error_page  404              /404.html;
 
-            client_max_body_size       10m;
-            client_body_buffer_size    128k;
-
-            client_body_temp_path      /var/nginx/client_body_temp;
-
-            proxy_connect_timeout      70;
-            proxy_send_timeout         90;
-            proxy_read_timeout         90;
-            proxy_send_lowat           12000;
-
-            proxy_buffer_size          4k;
-            proxy_buffers              4 32k;
-            proxy_busy_buffers_size    64k;
-            proxy_temp_file_write_size 64k;
-
-            proxy_temp_path            /var/nginx/proxy_temp;
-
-            charset  koi8-r;
+        # redirect server error pages to the static page /50x.html
+        #
+        error_page   500 502 503 504  /50x.html;
+        location = /50x.html {
+            root   html;
         }
 
-        error_page  404  /404.html;
+        # proxy the PHP scripts to Apache listening on 127.0.0.1:80
+        #
+        #location ~ \.php$ {
+        #    proxy_pass   http://127.0.0.1;
+        #}
 
-        location = /404.html {
-            root  /spool/www;
-        }
+        # pass the PHP scripts to FastCGI server listening on 127.0.0.1:9000
+        #
+        #location ~ \.php$ {
+        #    root           html;
+        #    fastcgi_pass   127.0.0.1:9000;
+        #    fastcgi_index  index.php;
+        #    fastcgi_param  SCRIPT_FILENAME  /scripts$fastcgi_script_name;
+        #    include        fastcgi_params;
+        #}
 
-        location /old_stuff/ {
-            rewrite   ^/old_stuff/(.*)$  /new_stuff/$1  permanent;
-        }
-
-        location /download/ {
-
-            valid_referers  none  blocked  server_names  *.example.com;
-
-            if ($invalid_referer) {
-                #rewrite   ^/   http://www.example.com/;
-                return   403;
-            }
-
-            #rewrite_log  on;
-
-            # rewrite /download/*/mp3/*.any_ext to /download/*/mp3/*.mp3
-            rewrite ^/(download/.*)/mp3/(.*)\..*$
-                    /$1/mp3/$2.mp3                   break;
-
-            root         /spool/www;
-            #autoindex    on;
-            access_log   /var/log/nginx-download.access_log  download;
-        }
-
-        location ~* \.(jpg|jpeg|gif)$ {
-            root         /spool/www;
-            access_log   off;
-            expires      30d;
-        }
+        # deny access to .htaccess files, if Apache's document root
+        # concurs with nginx's one
+        #
+        #location ~ /\.ht {
+        #    deny  all;
+        #}
     }
+
+
+    # another virtual host using mix of IP-, name-, and port-based configuration
+    #
+    #server {
+    #    listen       8000;
+    #    listen       somename:8080;
+    #    server_name  somename  alias  another.alias;
+
+    #    location / {
+    #        root   html;
+    #        index  index.html index.htm;
+    #    }
+    #}
+
+
+    # HTTPS server
+    #
+    #server {
+    #    listen       443 ssl;
+    #    server_name  localhost;
+
+    #    ssl_certificate      cert.pem;
+    #    ssl_certificate_key  cert.key;
+
+    #    ssl_session_cache    shared:SSL:1m;
+    #    ssl_session_timeout  5m;
+
+    #    ssl_ciphers  HIGH:!aNULL:!MD5;
+    #    ssl_prefer_server_ciphers  on;
+
+    #    location / {
+    #        root   html;
+    #        index  index.html index.htm;
+    #    }
+    #}
+
 }
 EOL
 
