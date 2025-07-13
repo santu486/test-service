@@ -13,12 +13,32 @@ public class HealthController {
 	
 	Logger logger = LoggerFactory.getLogger(HealthController.class);
 
-	@RequestMapping(value = "/health")
+	@RequestMapping(value = "/health1")
 	public String health() {
-		logger.info("Health Check Request is recieved");
+		logger.info("Health Check Request is recieved  bu santosh health1 ");
 		System.out.println("Health Check Request is recieved");
 		
 		return "ok " ;
 	}
+
+
+@RequestMapping(value = "/health2")
+	public String health2() {
+		logger.info("Health Check Request is recieved  by santosh health 2");
+		System.out.println("Health Check Request is recieved");
+		
+		return "ok " ;
+	}
+
+@RequestMapping(value = "/health2")
+	public String health3() {
+		logger.info("Health Check Request is recieved by santosh heakth3");
+		System.out.println("Health Check Request is recieved");
+		
+		return "ok " ;
+	}
+
+
+
 
 }
